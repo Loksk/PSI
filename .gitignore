@@ -1,0 +1,15 @@
+# Frontend
+FE/node_modules/
+FE/dist/
+FE/.env
+
+# Backend (if applicable)
+ais-spring-full/target/
+ais-spring-full/.env
+
+# Logs
+*.log
+
+# System junk
+.DS_Store
+Thumbs.db
