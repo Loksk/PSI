@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 @Configuration
-@EnableMethodSecurity
+//@EnableMethodSecurity
 public class SecurityConfig {
 
   @Bean
