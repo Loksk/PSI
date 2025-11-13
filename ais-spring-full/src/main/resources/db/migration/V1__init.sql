@@ -23,6 +23,7 @@ create table if not exists ais.user_account (
   email text unique not null,
   given_name text not null,
   family_name text not null,
+  password_hash text not null,
   roles text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -14,9 +14,15 @@ spring:
       hibernate.jdbc.time_zone: UTC
       hibernate.format_sql: true
   flyway:
-    enabled: false             # dočasne vypnuté, zapneme neskôr
+    enabled: true             # dočasne vypnuté, zapneme neskôr
 
 logging:
   level:
     org.springframework: INFO
     org.hibernate.SQL: INFO
+
+security:
+  jwt:
+    secret: q2y5l0s8v1x4n7r3q5n0z8v2x1l4k7r9  # zmeň na reálne tajomstvo
+    issuer: ais-api
+    expiration: PT1H
