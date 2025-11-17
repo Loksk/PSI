@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TopNav } from './components/TopNav';
 import { Sidebar } from './components/Sidebar';
 import { StudentDashboard } from './components/StudentDashboard';
@@ -22,6 +22,16 @@ import { UserRole } from './types';
 import { Toaster } from './components/ui/sonner';
 import { toast } from 'sonner@2.0.3';
 
+const ACCESS_TOKEN_KEY = 'ais.accessToken';
+const REFRESH_TOKEN_KEY = 'ais.refreshToken';
+const ROLE_KEY = 'ais.role';
+
+interface AuthPayload {
+  accessToken: string;
+  refreshToken?: string;
+  role: UserRole;
+}
+
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('student');
@@ -29,11 +39,37 @@ export default function App() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleLogin = (role: UserRole) => {
+  useEffect(() => {
+    const storedAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const storedRole = localStorage.getItem(ROLE_KEY) as UserRole | null;
+
+    if (storedAccessToken && storedRole) {
+      setCurrentRole(storedRole);
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handleLogin = ({ accessToken, refreshToken, role }: AuthPayload) => {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+    localStorage.setItem(ROLE_KEY, role);
+
     setCurrentRole(role);
     setIsLoggedIn(true);
     setCurrentPage('dashboard');
     toast.success('Successfully logged in!');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(ROLE_KEY);
+    setIsLoggedIn(false);
+    setCurrentPage('dashboard');
   };
 
   const handlePageChange = (page: string) => {

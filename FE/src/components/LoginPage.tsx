@@ -5,52 +5,60 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
-import { Separator } from './ui/separator';
-import { UserRole } from '../types';
+import { login } from '../lib/api';
+import type { UserRole } from '../types';
+
+interface LoginSuccessPayload {
+  accessToken: string;
+  refreshToken?: string;
+  role: UserRole;
+}
 
 interface LoginPageProps {
-  onLogin: (role: UserRole) => void;
+  onLogin: (payload: LoginSuccessPayload) => void;
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  const validate = () => {
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return false;
+    }
 
-    // Simulate authentication
-    setTimeout(() => {
-      if (!email || !password) {
-        setError('Please enter both email and password');
-        setIsLoading(false);
-        return;
-      }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setError('Please enter a valid university email address.');
+      return false;
+    }
 
-      // Demo credentials
-      if (email.includes('student')) {
-        onLogin('student');
-      } else if (email.includes('teacher')) {
-        onLogin('teacher');
-      } else if (email.includes('admin')) {
-        onLogin('admin');
-      } else {
-        onLogin('student'); // Default to student
-      }
-      setIsLoading(false);
-    }, 1000);
+    return true;
   };
 
-  const handleDemoLogin = (role: UserRole) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+
+    if (!validate()) {
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
-      onLogin(role);
+
+    try {
+      const result = await login({ email, password });
+      onLogin(result);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Sign-in failed. Please try again later.';
+      setError(message);
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -61,20 +69,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
           <h1 className="text-gray-900">Academic Information System</h1>
-          <p className="text-gray-600 mt-2">
-            Sign in to access your university portal
-          </p>
+          <p className="text-gray-600 mt-2">Sign in to access your university portal</p>
         </div>
 
         <Card>
           <CardHeader>
             <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your university credentials to continue
-            </CardDescription>
+            <CardDescription>Enter your university credentials to continue</CardDescription>
           </CardHeader>
+
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -91,9 +96,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     type="email"
                     placeholder="your.email@university.edu"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(event) => setEmail(event.target.value)}
                     className="pl-10"
                     disabled={isLoading}
+                    autoComplete="username"
+                    required
                   />
                 </div>
               </div>
@@ -107,75 +114,35 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                     type="password"
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(event) => setPassword(event.target.value)}
                     className="pl-10"
                     disabled={isLoading}
+                    autoComplete="current-password"
+                    required
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="rounded border-gray-300" />
+                  <input type="checkbox" className="rounded border-gray-300" disabled={isLoading} />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <Button variant="link" type="button" className="p-0 h-auto">
+                <Button variant="link" type="button" className="p-0 h-auto" disabled={isLoading}>
                   Forgot password?
                 </Button>
               </div>
 
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Signing in…' : 'Sign In'}
               </Button>
-
-              <Separator className="my-4" />
-
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-3">
-                  Demo Access - Select a role:
-                </p>
-                <div className="grid gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDemoLogin('student')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    Login as Student
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDemoLogin('teacher')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    Login as Teacher
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDemoLogin('admin')}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    Login as Administrator
-                  </Button>
-                </div>
-              </div>
             </form>
 
-            <div className="mt-6 pt-6 border-t text-center">
-              <p className="text-sm text-gray-600">
-                Need help? Contact{' '}
-                <Button variant="link" className="p-0 h-auto">
-                  support@university.edu
-                </Button>
-              </p>
+            <div className="mt-6 pt-6 border-t text-center text-sm text-gray-600">
+              Need help? Contact{' '}
+              <Button variant="link" className="p-0 h-auto" type="button">
+                support@university.edu
+              </Button>
             </div>
           </CardContent>
         </Card>
