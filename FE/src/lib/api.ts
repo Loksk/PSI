@@ -20,6 +20,15 @@ interface LoginPayload {
   password: string;
 }
 
+interface BackendLoginResponse {
+  token: string;
+  expiresAt: string;
+  email: string;
+  givenName: string;
+  familyName: string;
+  roles: string[];
+}
+
 interface LoginResponse {
   accessToken: string;
   refreshToken?: string;
@@ -27,7 +36,7 @@ interface LoginResponse {
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  const response = await fetch(`${API}/login`, {
+  const response = await fetch(`${API}/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -40,7 +49,13 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
     throw new Error(message || 'Unable to sign in with the provided credentials.');
   }
 
-  return response.json();
+  const data: BackendLoginResponse = await response.json();
+  const role = data.roles?.[0]?.toLowerCase() as UserRole | undefined;
+
+  return {
+    accessToken: data.token,
+    role: role ?? 'student',
+  };
 }
 
 export function getStudentId() {

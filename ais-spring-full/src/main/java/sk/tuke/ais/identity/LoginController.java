@@ -16,6 +16,7 @@ import sk.tuke.ais.domain.UserAccount;
 import sk.tuke.ais.identity.dto.LoginRequest;
 import sk.tuke.ais.identity.dto.LoginResponse;
 import sk.tuke.ais.repo.UserAccountRepository;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 
 import java.time.Instant;
 
@@ -62,7 +63,8 @@ public class LoginController {
       .claim("roles", account.getRoles())
       .build();
 
-    var token = jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+    var headers = JwsHeader.with(MacAlgorithm.HS256).build();
+    var token = jwtEncoder.encode(JwtEncoderParameters.from(headers, claims)).getTokenValue();
 
     var response = new LoginResponse(
       token,

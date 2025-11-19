@@ -1,8 +1,5 @@
 package sk.tuke.ais.config;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.OctetSequenceKey;
-import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,15 +13,24 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.*;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import sk.tuke.ais.identity.DatabaseUserDetailsService;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.Customizer;
 
-import java.text.ParseException;
-import java.time.Duration;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
@@ -50,20 +56,21 @@ public class SecurityConfig {
   }
 
   @Bean
-  public JwtEncoder jwtEncoder(@Value("${security.jwt.secret}") String secret) throws ParseException {
-    var jwk = new OctetSequenceKey.Builder(secret.getBytes()).build();
-    return new NimbusJwtEncoder(new ImmutableSecret<>(jwk.toOctetSequenceKey().toByteArray()));
+  public JwtEncoder jwtEncoder(@Value("${security.jwt.secret}") String secret) {
+    SecretKey secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    return new NimbusJwtEncoder(new ImmutableSecret<>(secretKey));
   }
 
   @Bean
-  public JwtDecoder jwtDecoder(@Value("${security.jwt.secret}") String secret) throws JOSEException {
-    var jwk = new OctetSequenceKey.Builder(secret.getBytes()).build();
-    return NimbusJwtDecoder.withSecretKey(jwk.toSecretKey()).build();
+  public JwtDecoder jwtDecoder(@Value("${security.jwt.secret}") String secret) {
+    SecretKey secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+    return NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
   }
 
   @Bean
   SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
+      .cors(Customizer.withDefaults())
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests(auth -> auth
         .requestMatchers(
@@ -94,5 +101,18 @@ public class SecurityConfig {
       return Stream.concat(defaults == null ? Stream.empty() : defaults.stream(), mapped).toList();
     });
     return converter;
+  }
+
+  @Bean
+  CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
+    config.setAllowedOrigins(List.of("http://localhost:3000"));
+    config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    config.setAllowedHeaders(List.of("*"));
+    config.setAllowCredentials(true); // vynechaj, ak credentials nepoužívaš
+
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", config);
+    return source;
   }
 }
